@@ -4,7 +4,7 @@ SRCDIR	:= $(TOPDIR)/src
 INCDIR	:= $(TOPDIR)/include
 
 target		:= libbina.so.1.0
-target-obj	:= bina.o bblock.o loops.o arch/x86/disasm-32.o
+target-obj	:= bina.o bblock.o loops.o trace.o arch/x86/disasm-32.o
 
 real-target		:= $(DISTDIR)/$(target)
 real-target-obj	:= $(foreach T,$(target-obj),$(SRCDIR)/$(T))

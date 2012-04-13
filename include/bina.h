@@ -1,6 +1,8 @@
 #ifndef __BINA_H__
 #define __BINA_H__
 
+#include <sys/types.h>
+
 struct bina_context;
 struct bina_instruction;
 
@@ -136,6 +138,29 @@ struct bina_basic_block {
 	
 	struct bina_basic_block *next;
 	struct bina_basic_block *prev;
+};
+
+struct bina_trace;
+struct bina_breakpoint {
+	struct bina_trace *trace;
+	struct bina_instruction *instruction;
+	void *state;
+};
+
+typedef int (*bina_break_handler_fn)(struct bina_breakpoint *breakpoint);
+
+struct bina_trace {
+	struct bina_context *context;
+	
+	bina_break_handler_fn handler;
+	
+	pid_t pid;
+	
+	const char *path;
+	void *text_base;
+	
+	struct bina_breakpoint *breakpoints[256];
+	unsigned int nr_breakpoints;
 };
 
 extern struct bina_context *bina_create(const struct bina_arch *arch, char *base, unsigned int size);

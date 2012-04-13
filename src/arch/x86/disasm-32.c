@@ -43,7 +43,7 @@ static void decode_operand_expression(struct bina_operand *bo, x86_op_t *ro)
         char             disp_sign;     /* is negative? 1/0 * /
         char             disp_size; */
     
-    printf("expr: ");
+    /*printf("expr: ");
     printi(ro->insn);
     printf("\n");
     
@@ -51,7 +51,7 @@ static void decode_operand_expression(struct bina_operand *bo, x86_op_t *ro)
 		ro->data.expression.scale,
 		ro->data.expression.index.id,
 		ro->data.expression.base.id,
-		ro->data.expression.disp);
+		ro->data.expression.disp);*/
     
 	return;
 }
