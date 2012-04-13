@@ -37,10 +37,10 @@ static void decode_branch(struct bina_instruction *bi, x86_insn_t *ri)
 
 static void decode_operand_expression(struct bina_operand *bo, x86_op_t *ro)
 {
-	/*unsigned int     scale;         /* scale factor * /
-    x86_reg_t        index, base;   /* index, base registers * /
-        int32_t          disp;          /* displacement * /
-        char             disp_sign;     /* is negative? 1/0 * /
+	/*unsigned int     scale;         / * scale factor * /
+    x86_reg_t        index, base;   / * index, base registers * /
+        int32_t          disp;          / * displacement * /
+        char             disp_sign;     / * is negative? 1/0 * /
         char             disp_size; */
     
     /*printf("expr: ");
@@ -262,4 +262,8 @@ const struct bina_arch x86_32_arch = {
 	.disassemble = x86_32_disasm,
 	.destroy = x86_32_destroy,
 	.print_instruction = x86_32_print,
+	
+	.break_code = 0xcc,
+	.break_mask = 0xff,
+	.break_size = 1,
 };

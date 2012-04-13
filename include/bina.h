@@ -10,6 +10,10 @@ struct bina_arch {
 	int (*disassemble)(struct bina_context *);
 	void (*destroy)(struct bina_context *);
 	void (*print_instruction)(struct bina_instruction *);
+	
+	unsigned long break_code;
+	unsigned long break_mask;
+	unsigned int break_size;
 };
 
 extern const struct bina_arch x86_32_arch;
@@ -144,6 +148,11 @@ struct bina_trace;
 struct bina_breakpoint {
 	struct bina_trace *trace;
 	struct bina_instruction *instruction;
+	
+	unsigned long addr;
+	unsigned long code_real;
+	unsigned long code_break;
+	
 	void *state;
 };
 

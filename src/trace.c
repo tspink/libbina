@@ -15,6 +15,11 @@ int start_child(struct bina_trace *trace)
 		execl(trace->path, trace->path, NULL);
 	} else if (trace->pid > 0) {
 		wait(NULL);
+		
+		trace->text_base = (void *)0x8048360;
+		
+		//(void *)ptrace(PTRACE_PEEKUSER, trace->pid, offsetof(struct user,start_code));
+		printf("text base: 0x%x\n", (unsigned int)trace->text_base);
 	} else {
 		return (int)trace->pid;
 	}
@@ -22,7 +27,7 @@ int start_child(struct bina_trace *trace)
 	return 0;
 }
 
-struct bina_trace *bina_trace_init(struct bina_context *ctx, const char *path, void *text_base, bina_break_handler_fn handler)
+struct bina_trace *bina_trace_init(struct bina_context *ctx, const char *path, bina_break_handler_fn handler)
 {
 	struct bina_trace *trace;
 	int rc;
@@ -34,7 +39,6 @@ struct bina_trace *bina_trace_init(struct bina_context *ctx, const char *path, v
 	trace->context = ctx;
 	trace->handler = handler;
 	trace->path = path;
-	trace->text_base = text_base;
 	
 	rc = start_child(trace);
 	if (rc) {
@@ -52,27 +56,15 @@ void bina_trace_destroy(struct bina_trace *trace)
 	free(trace);
 }
 
-static int do_install(struct bina_breakpoint *brk)
+static inline int do_install(struct bina_breakpoint *brk)
 {
-	unsigned long address = ((unsigned long)brk->trace->text_base) + (unsigned long)brk->instruction->offset;
-	unsigned long word = ptrace(PTRACE_PEEKTEXT, brk->trace->pid, (void *)address, NULL);
-	
-	((char *)&word)[0] = 0xcc;
-	
-	ptrace(PTRACE_POKETEXT, brk->trace->pid, (void *)address, word);
-	
+	ptrace(PTRACE_POKETEXT, brk->trace->pid, (void *)brk->addr, brk->code_break);
 	return 0;
 }
 
-static int do_uninstall(struct bina_breakpoint *brk)
+static inline int do_uninstall(struct bina_breakpoint *brk)
 {
-	unsigned long address = ((unsigned long)brk->trace->text_base) + (unsigned long)brk->instruction->offset;
-	unsigned long word = ptrace(PTRACE_PEEKTEXT, brk->trace->pid, (void *)address, NULL);
-	
-	((char *)&word)[0] = ((char *)brk->instruction->base)[0];
-	
-	ptrace(PTRACE_POKETEXT, brk->trace->pid, (void *)address, word);
-	
+	ptrace(PTRACE_POKETEXT, brk->trace->pid, (void *)brk->addr, brk->code_real);
 	return 0;
 }
 
@@ -89,12 +81,25 @@ struct bina_breakpoint *bina_install_breakpoint(struct bina_trace *trace, struct
 	brk->instruction = ins;
 	brk->state = state;
 	
+	/* Calculate the real memory address to insert the breakpoint code. */
+	brk->addr = ((unsigned long)trace->text_base) + (unsigned long)ins->offset;
+	
+	/* Read in the original code at the breakpoint location. */
+	brk->code_real = ptrace(PTRACE_PEEKTEXT, trace->pid, (void *)brk->addr, NULL);
+	
+	/* Not too scary, but, generate the break opcode. */
+	brk->code_break =
+		(brk->code_real & ~trace->context->arch->break_mask) | 
+		(trace->context->arch->break_code & trace->context->arch->break_mask);
+	
+	/* Install the breakpoint. */
 	rc = do_install(brk);
 	if (rc) {
 		free(brk);
 		brk = NULL;
 	}
 	
+	/* Store the breakpoint descriptor. */
 	trace->breakpoints[trace->nr_breakpoints] = brk;
 	trace->nr_breakpoints++;
 	
@@ -115,47 +120,44 @@ struct bina_breakpoint *find_breakpoint(struct bina_trace *trace, unsigned long 
 	return NULL;
 }
 
-void handle_breakpoint(struct bina_trace *trace)
+int handle_breakpoint(struct bina_trace *trace)
 {
+	int break_size = trace->context->arch->break_size;
 	struct bina_breakpoint *brk;
 	struct user_regs_struct regs;
 
-	/* Read the child registers. */
+	/* Read the child registers, and set the instruction pointer
+	 * to the location where the breakpoint occurred. */
 	ptrace(PTRACE_GETREGS, trace->pid, NULL, &regs);
-	
+	regs.eip -= break_size;
+	ptrace(PTRACE_SETREGS, trace->pid, NULL, &regs);
+
 	/* Find the breakpoint descriptor, based on where we've stopped. */
-	brk = find_breakpoint(trace, regs.eip - 1);
+	brk = find_breakpoint(trace, regs.eip);
 	if (!brk) {
-		printf("hmm, we've discovered an unregistered breakpoint\n");
-		return;
+		printf("error: unregistered breakpoint hit\n");
+		return -1;
 	}
 	
-	/* Call breakpoint handler. */
+	/* Call user-defined breakpoint handler. */
 	trace->handler(brk);
-	
-	/* Now, we need to continue.  To do that, we need to:
-	 *   1. Uninstall the breakpoint.
-	 *   2. Reset EIP to the location of the breakpoint instruction.
-	 *   3. Single step across the instruction.
-	 *   4. Put the breakpoint back.
-	 */
 	 
-	/* Step 1: Uninstall. */
+	/* Step 1: Uninstall the breakpoint, to reassert the original
+	 * code. */
 	do_uninstall(brk);
 	
-	/* Step 2: Reset EIP. */
-	regs.eip--;
-	ptrace(PTRACE_SETREGS, trace->pid, NULL, &regs);
-	
-	/* Step 3: Single step. */
+	/* Step 2: Single step through the real instruction, and wait for
+	 * that to complete. */
 	ptrace(PTRACE_SINGLESTEP, trace->pid, NULL, NULL);
 	wait(NULL);
 	
-	/* Step 4: Reinstall. */
+	/* Step 3: Reinstall the breakpoint, so it continues to get hit. */
 	do_install(brk);
 	
 	/* Continue execution of the child. */
 	ptrace(PTRACE_CONT, trace->pid, NULL, NULL);
+	
+	return 0;
 }
 
 int bina_trace_run(struct bina_trace *trace)
@@ -174,8 +176,18 @@ int bina_trace_run(struct bina_trace *trace)
 		
 		ptrace(PTRACE_GETSIGINFO, trace->pid, NULL, &signal);
 		
+		/* If we stopped because of a SIGTRAP, then we more than likely
+		 * hit a breakpoint.  So, pass off handling the breakpoint to
+		 * the handler routine. */
 		if (signal.si_signo == SIGTRAP) {
-			handle_breakpoint(trace);
+			status = handle_breakpoint(trace);
+			
+			/* If for some reason we couldn't handle the breakpoint,
+			 * then we probably can't continue because we've corrupted
+			 * the memory space by messing around with inserting
+			 * breakpoint opcodes. */
+			if (status)
+				return status;
 		}
 	} while(1);
 	
