@@ -83,7 +83,7 @@ struct bina_breakpoint *bina_install_breakpoint(struct bina_trace *trace, struct
 	brk->addr = ((unsigned long)trace->text_base) + (unsigned long)ins->offset;
 	
 	/* Read in the original code at the breakpoint location. */
-	brk->code_real = *(unsigned long *)ins->base; // ptrace(PTRACE_PEEKTEXT, trace->pid, (void *)brk->addr, NULL);
+	brk->code_real = *(unsigned long *)ins->base;
 	
 	/* Not too scary, but, generate the break opcode. */
 	brk->code_break =
