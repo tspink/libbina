@@ -6,7 +6,7 @@
 #include <sys/wait.h>
 #include <bina.h>
 
-int start_child(struct bina_trace *trace)
+static int start_child(struct bina_trace *trace)
 {
 	trace->pid = fork();
 	
@@ -99,7 +99,7 @@ struct bina_breakpoint *bina_install_breakpoint(struct bina_trace *trace, struct
 	return brk;
 }
 
-struct bina_breakpoint *find_breakpoint(struct bina_trace *trace, unsigned long addr)
+static struct bina_breakpoint *find_breakpoint(struct bina_trace *trace, unsigned long addr)
 {
 	unsigned long offset = addr - (unsigned long)trace->text_base;
 	int i;
@@ -113,7 +113,7 @@ struct bina_breakpoint *find_breakpoint(struct bina_trace *trace, unsigned long 
 	return NULL;
 }
 
-int handle_breakpoint(struct bina_trace *trace)
+static int handle_breakpoint(struct bina_trace *trace)
 {
 	int break_size = trace->context->arch->break_size;
 	struct bina_breakpoint *brk;

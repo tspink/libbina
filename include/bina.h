@@ -182,4 +182,10 @@ extern int bina_detect_basic_blocks(struct bina_context *ctx);
 extern void bina_destroy_basic_blocks(struct bina_context *ctx);
 extern struct bina_instruction *bina_instruction_at(struct bina_context *ctx, unsigned int offset);
 
+extern struct bina_trace *bina_trace_init(struct bina_context *ctx, const char *path, void *text_base, bina_break_handler_fn handler);
+extern void bina_trace_destroy(struct bina_trace *trace);
+extern struct bina_breakpoint *bina_install_breakpoint(struct bina_trace *trace, struct bina_instruction *ins, void *state);
+extern int bina_trace_run(struct bina_trace *trace);
+
+extern int bina_analyse_loops(struct bina_context *ctx);
 #endif
