@@ -6,6 +6,7 @@ INCDIR	:= $(TOPDIR)/include
 
 target		:= libbina.so.1.0
 target-obj	:= bina.o bblock.o loops.o trace.o arch/x86/disasm-32.o
+target-obj	+= arch/dex/disasm-dex.o
 
 test		:= bina-test
 test-obj	:= bina-test.o

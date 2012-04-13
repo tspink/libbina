@@ -17,6 +17,7 @@ struct bina_arch {
 };
 
 extern const struct bina_arch x86_32_arch;
+extern const struct bina_arch dex_arch;
 
 enum bina_instruction_type {
 	IT_U_BRANCH,
