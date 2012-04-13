@@ -69,9 +69,11 @@ struct bina_breakpoint *bina_install_breakpoint(struct bina_trace *trace, struct
 	struct bina_breakpoint *brk;
 	int rc;
 	
-	brk = calloc(1, sizeof(*brk));
-	if (!brk)
+	if (trace->nr_breakpoints == MAX_BREAKPOINTS - 1)
 		return NULL;
+	
+	brk = &trace->breakpoints[trace->nr_breakpoints];
+	trace->nr_breakpoints++;
 		
 	brk->trace = trace;
 	brk->instruction = ins;
@@ -91,14 +93,9 @@ struct bina_breakpoint *bina_install_breakpoint(struct bina_trace *trace, struct
 	/* Install the breakpoint. */
 	rc = do_install(brk);
 	if (rc) {
-		free(brk);
-		brk = NULL;
+		return NULL;
 	}
-	
-	/* Store the breakpoint descriptor. */
-	trace->breakpoints[trace->nr_breakpoints] = brk;
-	trace->nr_breakpoints++;
-	
+		
 	return brk;
 }
 
@@ -108,8 +105,8 @@ struct bina_breakpoint *find_breakpoint(struct bina_trace *trace, unsigned long 
 	int i;
 	
 	for (i = 0; i < trace->nr_breakpoints; i++) {
-		if (trace->breakpoints[i]->instruction->offset == offset) {
-			return trace->breakpoints[i];
+		if (trace->breakpoints[i].instruction->offset == offset) {
+			return &trace->breakpoints[i];
 		}
 	}
 	

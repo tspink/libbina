@@ -10,8 +10,8 @@ static int process_for_loop(struct bina_basic_block *start, struct bina_basic_bl
 	printf("loop test block: %d\n", condition->index);
 	bina_print_instruction(cmp);
 	printf("\n");
-	bina_print_instruction(cmp->next);
-	printf("\n");
+	//bina_print_instruction(cmp->next);
+	//printf("\n");
 	
 	if (cmp->type != IT_COMPARE) {
 		printf("loop test isn't a comparison - rejecting premise\n");

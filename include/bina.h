@@ -158,6 +158,8 @@ struct bina_breakpoint {
 
 typedef int (*bina_break_handler_fn)(struct bina_breakpoint *breakpoint);
 
+#define MAX_BREAKPOINTS		256
+
 struct bina_trace {
 	struct bina_context *context;
 	
@@ -168,7 +170,7 @@ struct bina_trace {
 	const char *path;
 	void *text_base;
 	
-	struct bina_breakpoint *breakpoints[256];
+	struct bina_breakpoint breakpoints[MAX_BREAKPOINTS];
 	unsigned int nr_breakpoints;
 };
 
