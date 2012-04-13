@@ -15,11 +15,6 @@ int start_child(struct bina_trace *trace)
 		execl(trace->path, trace->path, NULL);
 	} else if (trace->pid > 0) {
 		wait(NULL);
-		
-		trace->text_base = (void *)0x8048360;
-		
-		//(void *)ptrace(PTRACE_PEEKUSER, trace->pid, offsetof(struct user,start_code));
-		printf("text base: 0x%x\n", (unsigned int)trace->text_base);
 	} else {
 		return (int)trace->pid;
 	}
@@ -27,7 +22,7 @@ int start_child(struct bina_trace *trace)
 	return 0;
 }
 
-struct bina_trace *bina_trace_init(struct bina_context *ctx, const char *path, bina_break_handler_fn handler)
+struct bina_trace *bina_trace_init(struct bina_context *ctx, const char *path, void *text_base, bina_break_handler_fn handler)
 {
 	struct bina_trace *trace;
 	int rc;
@@ -39,6 +34,7 @@ struct bina_trace *bina_trace_init(struct bina_context *ctx, const char *path, b
 	trace->context = ctx;
 	trace->handler = handler;
 	trace->path = path;
+	trace->text_base = text_base;
 	
 	rc = start_child(trace);
 	if (rc) {
