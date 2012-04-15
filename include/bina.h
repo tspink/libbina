@@ -116,6 +116,7 @@ struct bina_instruction {
 
 struct bina_context {
 	const struct bina_arch *arch;
+	void *arch_priv;
 	
 	char *base;
 	unsigned int size;

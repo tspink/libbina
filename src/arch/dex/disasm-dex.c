@@ -1,11 +1,14 @@
 #include <bina.h>
 #include <malloc.h>
 #include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
+#include "dex.h"
 
 static int dex_disasm(struct bina_context *ctx)
 {
+	ctx->arch_priv = dex_load(ctx);
+	if (!ctx->arch_priv)
+		return -1;
+		
 	ctx->instructions = calloc(ctx->size, sizeof(*ctx->instructions));
 	if (!ctx->instructions)
 		return -1;
@@ -22,6 +25,8 @@ static void dex_destroy(struct bina_context *ctx)
 	}
 	
 	free(ctx->instructions);
+	
+	dex_unload((struct dex *)ctx->arch_priv);
 }
 
 static void dex_print(struct bina_instruction *ins)

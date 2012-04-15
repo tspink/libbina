@@ -6,23 +6,29 @@ INCDIR	:= $(TOPDIR)/include
 
 target		:= libbina.so.1.0
 target-obj	:= bina.o bblock.o loops.o trace.o arch/x86/disasm-32.o
-target-obj	+= arch/dex/disasm-dex.o
+target-obj	+= arch/dex/disasm-dex.o arch/dex/dex.o
 
 test		:= bina-test
 test-obj	:= bina-test.o
 
-real-target		:= $(DISTDIR)/$(target)
+test-dex		:= bina-dex-test
+test-dex-obj	:= bina-dex-test.o
+
+real-target			:= $(DISTDIR)/$(target)
 real-target-obj		:= $(foreach T,$(target-obj),$(SRCDIR)/$(T))
 
-real-test		:= $(DISTDIR)/$(test)
+real-test			:= $(DISTDIR)/$(test)
 real-test-obj		:= $(foreach T,$(test-obj),$(TESTDIR)/$(T))
+
+real-test-dex		:= $(DISTDIR)/$(test-dex)
+real-test-dex-obj	:= $(foreach T,$(test-dex-obj),$(TESTDIR)/$(T))
 
 LDFLAGS	:= -Wl,-soname,libbina.so.1 -L/usr/local/lib -ldisasm
 CFLAGS	:= -g -Wall -D__BINA_LIBRARY__
 
 LN := ln
 
-all:	$(real-target) $(real-test)
+all:	$(real-target) $(real-test) $(real-test-dex)
 
 $(real-target): $(real-target-obj)
 	$(CC) -shared -o $@ $(LDFLAGS) $(real-target-obj)
@@ -30,8 +36,12 @@ $(real-target): $(real-target-obj)
 $(real-test): $(real-target) $(real-test-obj)
 	$(CC) -o $@ $(real-test-obj) -L$(DISTDIR) -lbina -lelf
 
+$(real-test-dex): $(real-target) $(real-test-dex-obj)
+	$(CC) -o $@ $(real-test-dex-obj) -L$(DISTDIR) -lbina
+
 %.o: %.c
 	$(CC) -c -o $@ -fPIC -I$(INCDIR) $(CFLAGS) $<
 
 clean:
 	$(RM) $(real-target) $(real-target-obj) $(real-test) $(real-test-obj)
+	$(RM) $(real-test-dex) $(real-test-dex-obj)
